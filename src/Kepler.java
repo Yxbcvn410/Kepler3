@@ -26,12 +26,7 @@ public class Kepler {
 				return;
 		}
 
-		FrameUI fui = new FrameUI(n);
+		FrameUI fui = new FrameUI(n, init);
 		fui.setVisible(true);
-		if (init) {
-			fui.randomizeValues();
-			fui.balanceValues();
-		}
-
 	}
 }

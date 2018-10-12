@@ -7,7 +7,7 @@ public class MathModel {
 	private int Accu;
 
 	// Velocity in m/s
-	// Acceleration in m/s^2
+	// Acceleration in km*1000/s^2
 	// Distance in km*1000
 
 	public MathModel(BigDecimal[][] params) {
@@ -18,8 +18,8 @@ public class MathModel {
 		for (int i = 0; i < Params.length; i++) {
 			for (int j = 0; j < 5; j++)
 				Params[i][j] = params[i][j];
-			Params[i][2] = Params[i][2].multiply(new BigDecimal(1000));
-			Params[i][3] = Params[i][3].multiply(new BigDecimal(1000));
+			// Params[i][2] = Params[i][2].multiply(new BigDecimal(1000));
+			// Params[i][3] = Params[i][3].multiply(new BigDecimal(1000));
 		}
 		os = new BigDecimal(1).divide(new BigDecimal(6), 30, RoundingMode.FLOOR);
 	}
@@ -28,8 +28,17 @@ public class MathModel {
 		h = _h;
 	}
 
-	public void SetAccu(int accu) {
+	public void setAccu(int accu) {
 		Accu = accu;
+	}
+	
+	public int getAccu() {
+		return Accu;
+	}
+	
+	public SystemParams getParams()
+	{
+		return new SystemParams(Params);
 	}
 
 	// 0 - posx
@@ -113,7 +122,7 @@ public class MathModel {
 
 	private BigDecimal GetDiff(BigDecimal[][] params, int planetIndex, int funcIndex) {
 		if (funcIndex < 2) {
-			return params[planetIndex][funcIndex + 2].multiply(new BigDecimal("0.000001"));
+			return params[planetIndex][funcIndex + 2];
 		} else if (funcIndex == 2) {
 			BigDecimal ret = new BigDecimal("0");
 			for (int i = 0; i < params.length; i++) {
@@ -122,7 +131,7 @@ public class MathModel {
 							new Vector(params[i][0], params[i][1]), params[i][4]).X);
 				}
 			}
-			return ret;
+			return ret.multiply(new BigDecimal("0.000001"));
 		} else {
 			BigDecimal ret = new BigDecimal("0");
 			for (int i = 0; i < params.length; i++) {
@@ -131,7 +140,7 @@ public class MathModel {
 							new Vector(params[i][0], params[i][1]), params[i][4]).Y);
 				}
 			}
-			return ret;
+			return ret.multiply(new BigDecimal("0.000001"));
 		}
 	}
 
@@ -146,15 +155,17 @@ public class MathModel {
 		BigDecimal a = mass2.multiply(new BigDecimal(
 				"0.66740831313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131")
 						.setScale(Accu, RoundingMode.FLOOR));
-		a = a.divide(r, RoundingMode.FLOOR);
-		a = a.divide(r, RoundingMode.FLOOR);
+		BigDecimal ee = new BigDecimal("0.1");
+		BigDecimal rr = r.add(ee);
+		rr=rr.multiply(rr);
+		a = a.divide(rr, RoundingMode.FLOOR);
 		Vector va = new Vector(pos.X, pos.Y);
 		va.Multiply(a.divide(r, RoundingMode.FLOOR));
 		va.Multiply(new BigDecimal(-1));
 		return va;// m/s^2
 	}
 
-	private static BigDecimal sqrt(BigDecimal in, int scale) {
+	public static BigDecimal sqrt(BigDecimal in, int scale) {
 		BigDecimal sqrt = new BigDecimal(1);
 		sqrt.setScale(scale + 3, RoundingMode.FLOOR);
 		BigDecimal store = new BigDecimal(in.toString());
@@ -170,4 +181,6 @@ public class MathModel {
 		} while (!store.equals(sqrt));
 		return sqrt.setScale(scale, RoundingMode.FLOOR);
 	}
+	
+	
 }
