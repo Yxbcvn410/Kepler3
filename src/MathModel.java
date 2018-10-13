@@ -155,7 +155,7 @@ public class MathModel {
 		BigDecimal a = mass2.multiply(new BigDecimal(
 				"0.66740831313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131")
 						.setScale(Accu, RoundingMode.FLOOR));
-		BigDecimal ee = new BigDecimal("0.1");
+		BigDecimal ee = new BigDecimal("0");
 		BigDecimal rr = r.add(ee);
 		rr=rr.multiply(rr);
 		a = a.divide(rr, RoundingMode.FLOOR);

@@ -17,9 +17,12 @@ public class FrameUI extends JFrame {
 	int size;
 	boolean flag;
 	protected JButton startButton;
+	JComboBox com;
+	final boolean perfLyapunov;
 
-	public FrameUI(int n, boolean rand) {
-		this.setTitle("Kepler v4.1");
+	public FrameUI(int n, boolean rand, boolean lyapunov) {
+		perfLyapunov = lyapunov;
+		this.setTitle("Kepler v5.3");
 		flag = false;
 		size = 800;
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -29,28 +32,65 @@ public class FrameUI extends JFrame {
 		gc.gridheight = n + 12;
 		gc.gridwidth = 2;
 		gc.gridheight = 1;
-		gc.gridwidth = 2;
+		gc.gridwidth = 1;
 		gc.gridx = 0;
+		gc.gridy = 0;
 		gc.weightx = 0.5;
 		gc.weighty = 0.5;
 		gc.insets = new Insets(3, 3, 3, 3);
 		gc.fill = GridBagConstraints.BOTH;
 
 		Params = new SystemParams(n, rand);
-		for (int ii = 0; ii < n; ii++) {
-			int i = ii;
-			gc.gridy = i;
-			JButton setParams = new JButton("Specify #" + (i + 1) + " planet");
-			setParams.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					Params.setPlanet(i, getLaunchParams(Params.getPlanet(i), i + 1));
-				}
-			});
-			this.add(setParams, gc);
-		}
+		if (rand)
+			Params.balance();
 
+		com = new JComboBox<Integer>();
+		for (int i = 0; i < Params.n; i++)
+			com.addItem(i + 1);
+		this.add(com, gc);
+
+		gc.gridx = 1;
+
+		JButton setParams = new JButton("Specify planet");
+		setParams.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				Params.setPlanet(com.getSelectedIndex(),
+						getLaunchParams(Params.getPlanet(com.getSelectedIndex()), com.getSelectedIndex() + 1));
+				RefreshPreview();
+			}
+		});
+		this.add(setParams, gc);
 		gc.gridy++;
+		gc.gridx = 0;
+		JButton addParams = new JButton("Add planet");
+		addParams.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				BigDecimal[] pars = getLaunchParams(null, com.getItemCount() + 1);
+				if (pars == null)
+					return;
+				Params.addPlanet(pars);
+				com.addItem(com.getItemCount() + 1);
+				RefreshPreview();
+			}
+		});
+		this.add(addParams, gc);
+		gc.gridx = 1;
+
+		JButton remParams = new JButton("Remove planet");
+		remParams.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				Params.removePlanet(com.getSelectedIndex());
+				com.removeItemAt(com.getItemCount() - 1);
+				RefreshPreview();
+			}
+		});
+		this.add(remParams, gc);
+		gc.gridy++;
+
+		gc.gridx = 0;
 		gc.gridwidth = 1;
 		JLabel ac = new JLabel("Algorythm step (s)");
 		this.add(ac, gc);
@@ -106,7 +146,10 @@ public class FrameUI extends JFrame {
 						canvas.getGraphics().clearRect(0, 0, size, size);
 						Thread th = new Thread() {
 							public void run() {
-								onStarted(h, a);
+								if (perfLyapunov)
+									onStartedLyapunov(h, a);
+								else
+									onStarted(h, a);
 							}
 						};
 						th.start();
@@ -191,36 +234,41 @@ public class FrameUI extends JFrame {
 	}
 
 	void onStarted(BigDecimal h, int a) {
+		MathModel model = new MathModel(Params.getParams());
+		model.setStep(h);
+		model.setAccu(a);
+		int rStep = (int) Math.pow(10, 2 - (int) Math.log10(h.doubleValue()));
+		if (rStep > 1000)
+			rStep = 1000;
+		int i = 0;
+		while (flag) {
+			i++;
+			if (i > rStep) {
+				DrawPoints(model.PerformStep());
+				i -= rStep;
+			} else
+				model.PerformStep();
+		}
+
+	}
+
+	void onStartedLyapunov(BigDecimal h, int a) {
 		LyapunovModel model = new LyapunovModel(Params, h, a);
-		int q = 10;
-		int n = 15;
-		int ss = 10;
-		int it = 0;
+		int ss = 1000;
 		while (flag) {
 			Vector[][] vecs = model.performStep();
 			for (int i = 0; i < vecs.length; i++) {
 				DrawPoints(vecs[i]);
 			}
 
-			if (model.t == ss && it < n) {
-				System.out.println("matout");
+			if (model.t % ss == 1) {
 				Double[] mat = model.retreiveMatrix();
 				for (int i = 0; i < mat.length; i++) {
 					System.out.println(mat[i].toString());
 				}
 				System.out.println();
-				ss = ss*q;
-				it++;
 			}
 		}
-		/*
-		 * MathModel model = new MathModel(Params.getParams()); model.setStep(h);
-		 * model.setAccu(a); int rStep = (int) Math.pow(10, 2 - (int)
-		 * Math.log10(h.doubleValue())); if (rStep > 1000) rStep = 1000; int i = 0;
-		 * while (flag) { i++; if (i > rStep) { DrawPoints(model.PerformStep()); i -=
-		 * rStep; } else model.PerformStep(); }
-		 */
-		System.out.print("suspended\n");
 	}
 
 	void DrawPoints(Vector[] points) {
@@ -245,8 +293,8 @@ public class FrameUI extends JFrame {
 
 				g.fillOval(size / 2 + Position.x - 2, size / 2 - Position.y - 2, 5, 5);
 				g.drawLine(size / 2 + Position.x, size / 2 - Position.y,
-						size / 2 + Position.x + (int) (Speed.X.doubleValue() * 1000),
-						size / 2 - Position.y - (int) (Speed.Y.doubleValue() * 1000));
+						size / 2 + Position.x + (int) (Speed.X.doubleValue() * 100000),
+						size / 2 - Position.y - (int) (Speed.Y.doubleValue() * 100000));
 			} catch (NullPointerException e) {
 				JOptionPane.showMessageDialog(null, "Error: no info about planet #" + (i + 1), "Error",
 						JOptionPane.ERROR_MESSAGE);
@@ -255,6 +303,12 @@ public class FrameUI extends JFrame {
 		}
 	}
 
+	JTextArea posx = new JTextArea("");
+	JTextArea posy = new JTextArea("");
+	JTextArea velx = new JTextArea("");
+	JTextArea vely = new JTextArea("");
+	JTextArea mass = new JTextArea("");
+
 	BigDecimal[] getLaunchParams(BigDecimal[] inParams, int ind) {
 		JLabel lposx = new JLabel("Position X (x1000 km)");
 		JLabel lposy = new JLabel("Position Y (x1000 km)");
@@ -262,11 +316,24 @@ public class FrameUI extends JFrame {
 		JLabel lvely = new JLabel("Velocity Y (km/s)");
 		JLabel lmass = new JLabel("Mass (x10^22 kg)");
 
-		JTextArea posx = new JTextArea("");
-		JTextArea posy = new JTextArea("");
-		JTextArea velx = new JTextArea("");
-		JTextArea vely = new JTextArea("");
-		JTextArea mass = new JTextArea("");
+		posx = new JTextArea("");
+		posy = new JTextArea("");
+		velx = new JTextArea("");
+		vely = new JTextArea("");
+		mass = new JTextArea("");
+
+		JButton rand = new JButton("Randomize values");
+		rand.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				BigDecimal[] loc = SystemParams.generatePlanet();
+				posx.setText(loc[0].toString());
+				posy.setText(loc[1].toString());
+				velx.setText(loc[2].multiply(new BigDecimal(1000)).toString());
+				vely.setText(loc[3].multiply(new BigDecimal(1000)).toString());
+				mass.setText(loc[4].toString());
+			}
+		});
 
 		if (inParams != null) {
 			posx = new JTextArea(inParams[0].toString());
@@ -276,8 +343,8 @@ public class FrameUI extends JFrame {
 			mass = new JTextArea(inParams[4].toString());
 		}
 
-		final JComponent[] inputs = new JComponent[] { lposx, posx, lposy, posy, lvelx, velx, lvely, vely, lmass,
-				mass };
+		final JComponent[] inputs = new JComponent[] { lposx, posx, lposy, posy, lvelx, velx, lvely, vely, lmass, mass,
+				rand };
 		boolean flagg = true;
 		BigDecimal[] lParams = new BigDecimal[5];
 		do {
@@ -317,6 +384,9 @@ public class FrameUI extends JFrame {
 					s += sc.nextLine() + '\n';
 				sc.close();
 				Params = new SystemParams(s);
+				com.removeAllItems();
+				for (int i = 0; i < Params.n; i++)
+					com.addItem(i + 1);
 				RefreshPreview();
 			} catch (FileNotFoundException e) {
 

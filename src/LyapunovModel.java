@@ -25,16 +25,10 @@ public class LyapunovModel {
 		cModel.setStep(h);
 
 		baseDiffmap = new BigDecimal[models.length];
-		for (int j = 0; j < models.length / 4; j++) {
-			for (int k = 0; k < 4; k++) {
-				BigDecimal difference = models[j * 4 + k].getParams().getParams()[j][k]
-						.subtract(cModel.getParams().getParams()[j][k]);
-				if (difference.compareTo(new BigDecimal("0")) == -1)
-					difference.multiply(new BigDecimal("-1"));
-				baseDiffmap[j * 4 + k] = difference;
-			}
+		for( int i = 0; i < models.length; i++)
+		{
+			baseDiffmap[i] = getDifference(models[i], cModel);
 		}
-
 	}
 
 	Vector[][] performStep() {
