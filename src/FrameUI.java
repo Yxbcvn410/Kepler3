@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import javax.swing.filechooser.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -8,20 +10,20 @@ import java.io.PrintWriter;
 import java.math.*;
 import java.util.Scanner;
 
-public class FrameUI extends JFrame {
+class FrameUI extends JFrame {
     private SystemParams Params;
-    private JTextArea step;
+    private JTextArea reqAccu;
     private JTextArea accu;
     private Canvas canvas;
     private int size;
     private boolean isRunning;
-    protected JButton startButton;
+    private JButton startButton;
     private JComboBox com;
-    final boolean perfLyapunov;
+    private final boolean perfLyapunov;
 
     FrameUI(int n, boolean rand, boolean lyapunov) {
         perfLyapunov = lyapunov;
-        this.setTitle("Kepler v5.3");
+        this.setTitle("Kepler v6.0");
         isRunning = false;
         size = 800;
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -94,12 +96,12 @@ public class FrameUI extends JFrame {
 
         gc.gridx = 0;
         gc.gridwidth = 1;
-        JLabel ac = new JLabel("Algorythm step (s)");
+        JLabel ac = new JLabel("Required step accuracy");
         this.add(ac, gc);
 
         gc.gridx = 1;
-        step = new JTextArea("10");
-        this.add(step, gc);
+        reqAccu = new JTextArea("1E-15");
+        this.add(reqAccu, gc);
 
         gc.gridy++;
         gc.gridx = 0;
@@ -141,7 +143,7 @@ public class FrameUI extends JFrame {
                     startButton.setText("Start");
                 } else {
                     try {
-                        BigDecimal h = new BigDecimal(step.getText());
+                        BigDecimal ra = new BigDecimal(reqAccu.getText());
                         int a = Integer.parseInt(accu.getText());
                         isRunning = true;
                         startButton.setText("Stop");
@@ -149,9 +151,9 @@ public class FrameUI extends JFrame {
                         Thread th = new Thread() {
                             public void run() {
                                 if (perfLyapunov)
-                                    onStartedLyapunov(h, a);
+                                    onStartedLyapunov(ra, a);
                                 else
-                                    onStarted(h, a);
+                                    onStarted(ra, a);
                             }
                         };
                         th.start();
@@ -235,27 +237,25 @@ public class FrameUI extends JFrame {
         this.pack();
     }
 
-    void onStarted(BigDecimal h, int a) {
-        MathModel model = new MathModel(Params.getParams());
-        model.setStep(h);
+    void onStarted(BigDecimal ra, int a) {
+        MathModel model = new MathModel(Params.getParams(), true);
+        model.setRequiredAccu(ra);
         model.setAccu(a);
-        int rStep = (int) Math.pow(10, 2 - (int) Math.log10(h.doubleValue()));
-        if (rStep > 1000)
-            rStep = 1000;
+        int rStep = 10;
         int i = 0;
         while (isRunning) {
             i++;
             if (i > rStep) {
-                DrawPoints(model.PerformStep());
+                DrawPoints(model.Step());
                 i -= rStep;
             } else
-                model.PerformStep();
+                model.Step();
         }
 
     }
 
-    void onStartedLyapunov(BigDecimal h, int a) {
-        LyapunovModel model = new LyapunovModel(Params, h, a);
+    void onStartedLyapunov(BigDecimal ra, int a) {
+        LyapunovModel model = new LyapunovModel(Params, ra, a);
         int ss = 10;
         while (isRunning) {
             Vector[][] vecs = model.performStep();
@@ -266,26 +266,39 @@ public class FrameUI extends JFrame {
             if (model.t % ss == 1) {
                 double[] mat = model.retrievePLs();
                 double sum = 0;
-                for (int i = 0; i < mat.length; i++) {
-                    //for (int j = 0; j < mat.length; j++)
-                    System.out.print(mat[i] + " ");
-                    sum+=mat[i];
-                    System.out.println();
+                boolean print = false;
+                if(print)
+                {
+                    for (int i = 0; i < mat.length; i++) {
+                        //for (int j = 0; j < mat.length; j++)
+                        System.out.print(mat[i] + " ");
+                        sum+=mat[i];
+                        System.out.println();
+                    }
+                    System.out.println("sum: "+sum);
+                    System.out.println("\n");
                 }
-                System.out.println("sum: "+sum);
-                System.out.println("\n");
+
 
             }
         }
     }
 
     void DrawPoints(Vector[] points) {
-        Graphics g = canvas.getGraphics();
-        for (int i = 0; i < points.length; i++) {
-            float colorID = i / (float) (points.length);
-            g.setColor(Color.getHSBColor(colorID, 1, 1));
-            g.fillOval(size / 2 + points[i].x - 2, size / 2 - points[i].y - 2, 1, 1);
-        }
+
+        Thread th = new Thread(){
+
+            public void run() {
+                Graphics g = canvas.getGraphics();
+                for (int i = 0; i < points.length; i++) {
+                    float colorID = i / (float) (points.length);
+                    g.setColor(Color.getHSBColor(colorID, 1, 1));
+                    g.fillOval(size / 2 + points[i].x - 2, size / 2 - points[i].y - 2, 2, 2);
+
+                }
+            }
+        };
+        th.start();
     }
 
     void RefreshPreview() {
