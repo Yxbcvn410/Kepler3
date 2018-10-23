@@ -53,30 +53,24 @@ class FrameUI extends JFrame {
         gc.gridx = 1;
 
         JButton setParams = new JButton("Specify planet");
-        setParams.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                Params.setPlanet(com.getSelectedIndex(),
-                        getLaunchParams(Params.getPlanet(com.getSelectedIndex()), com.getSelectedIndex() + 1));
-                if (!isRunning)
-                    RefreshPreview();
-            }
+        setParams.addActionListener(arg0 -> {
+            Params.setPlanet(com.getSelectedIndex(),
+                    getLaunchParams(Params.getPlanet(com.getSelectedIndex()), com.getSelectedIndex() + 1));
+            if (!isRunning)
+                RefreshPreview();
         });
         this.add(setParams, gc);
         gc.gridy++;
         gc.gridx = 0;
         JButton addParams = new JButton("Add planet");
-        addParams.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                BigDecimal[] pars = getLaunchParams(null, com.getItemCount() + 1);
-                if (pars == null)
-                    return;
-                Params.addPlanet(pars);
-                com.addItem(com.getItemCount() + 1);
-                if (!isRunning)
-                    RefreshPreview();
-            }
+        addParams.addActionListener(arg0 -> {
+            BigDecimal[] pars = getLaunchParams(null, com.getItemCount() + 1);
+            if (pars == null)
+                return;
+            Params.addPlanet(pars);
+            com.addItem(com.getItemCount() + 1);
+            if (!isRunning)
+                RefreshPreview();
         });
         this.add(addParams, gc);
         gc.gridx = 1;
@@ -116,53 +110,45 @@ class FrameUI extends JFrame {
         gc.gridy++;
         gc.gridx = 0;
         JButton previewButton = new JButton("Preview");
-        previewButton.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                isRunning = false;
-                canvas.getGraphics().clearRect(0, 0, size, size);
-                startButton.setText("Start");
-                RefreshPreview();
-            }
+        previewButton.addActionListener(e -> {
+            isRunning = false;
+            canvas.getGraphics().clearRect(0, 0, size, size);
+            startButton.setText("Start");
+            RefreshPreview();
         });
         this.add(previewButton, gc);
 
         gc.gridx = 1;
         startButton = new JButton("Start");
-        startButton.addActionListener(new ActionListener() {
+        startButton.addActionListener(e -> {
+            if (Params.CheckNull())
+                return;
 
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (Params.CheckNull())
-                    return;
-
-                if (isRunning) {
-                    isRunning = false;
+            if (isRunning) {
+                isRunning = false;
+                canvas.getGraphics().clearRect(0, 0, size, size);
+                startButton.setText("Start");
+            } else {
+                try {
+                    BigDecimal ra = new BigDecimal(reqAccu.getText());
+                    int a = Integer.parseInt(accu.getText());
+                    isRunning = true;
+                    startButton.setText("Stop");
                     canvas.getGraphics().clearRect(0, 0, size, size);
-                    startButton.setText("Start");
-                } else {
-                    try {
-                        BigDecimal ra = new BigDecimal(reqAccu.getText());
-                        int a = Integer.parseInt(accu.getText());
-                        isRunning = true;
-                        startButton.setText("Stop");
-                        canvas.getGraphics().clearRect(0, 0, size, size);
-                        Thread th = new Thread() {
-                            public void run() {
-                                if (perfLyapunov)
-                                    onStartedLyapunov(ra, a);
-                                else
-                                    onStarted(ra, a);
-                            }
-                        };
-                        th.start();
+                    Thread th = new Thread() {
+                        public void run() {
+                            if (perfLyapunov)
+                                onStartedLyapunov(ra, a);
+                            else
+                                onStarted(ra, a);
+                        }
+                    };
+                    th.start();
 
-                    } catch (NumberFormatException ee) {
-                        JOptionPane.showMessageDialog(null, "Error: wrong number format", "Error",
-                                JOptionPane.OK_OPTION);
-                        isRunning = false;
-                    }
+                } catch (NumberFormatException ee) {
+                    JOptionPane.showMessageDialog(null, "Error: wrong number format", "Error",
+                            JOptionPane.OK_OPTION);
+                    isRunning = false;
                 }
             }
         });
@@ -171,14 +157,10 @@ class FrameUI extends JFrame {
         gc.gridy++;
         gc.gridx = 0;
         JButton RandomizeButton = new JButton("Randomize values");
-        RandomizeButton.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                Params = new SystemParams(Params.n, true);
-                JOptionPane.showMessageDialog(null, "Successful", "Randomize", JOptionPane.INFORMATION_MESSAGE);
-                RefreshPreview();
-            }
+        RandomizeButton.addActionListener(arg0 -> {
+            Params = new SystemParams(Params.n, true);
+            JOptionPane.showMessageDialog(null, "Successful", "Randomize", JOptionPane.INFORMATION_MESSAGE);
+            RefreshPreview();
         });
         this.add(RandomizeButton, gc);
 
