@@ -1,5 +1,5 @@
 import java.math.*;
-
+import org.apache.commons.math3.exception.MaxCountExceededException;
 import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
@@ -28,7 +28,7 @@ public class LyapunovModel {
         cModel.setAccu(accu);
         cModel.setRequiredAccu(ra);
 
-        baseDiff=retrieveMatrix();
+        baseDiff = retrieveMatrix();
     }
 
     Vector[][] performStep() {
@@ -38,16 +38,14 @@ public class LyapunovModel {
             out[i] = models[i - 1].Step();
         }
         t++;
-        time.add(cModel.getStep());
-        if(t%cModel.accuCheckStep==0)
-        {
-            int accuSt=cModel.getAccuStatus();
+        time=time.add(cModel.getStep());
+        if (t % cModel.accuCheckStep == 0) {
+            int accuSt = cModel.getAccuStatus();
             for (int i = 0; i < models.length; i++) {
-                if(models[i].getAccuStatus()<accuSt)
-                    accuSt=models[i].getAccuStatus();
+                if (models[i].getAccuStatus() < accuSt)
+                    accuSt = models[i].getAccuStatus();
             }
-            switch (accuSt)
-            {
+            switch (accuSt) {
                 case 1:
                     cModel.setH(cModel.getStep().multiply(new BigDecimal(2)));
                     for (int i = 0; i < models.length; i++) {
@@ -58,7 +56,8 @@ public class LyapunovModel {
                     cModel.setH(cModel.getStep().multiply(new BigDecimal("0.5")));
                     for (int i = 0; i < models.length; i++) {
                         models[i].setH(cModel.getStep().multiply(new BigDecimal("0.5")));
-                    }break;
+                    }
+                    break;
             }
             System.out.println("Step set to: " + cModel.getStep().toString());
         }
@@ -73,16 +72,22 @@ public class LyapunovModel {
             }
         }
         RealMatrix rm = MatrixUtils.createRealMatrix(matrix.clone());
-        EigenDecomposition ed = new EigenDecomposition(rm.copy());
-        return ed.getRealEigenvalues();
+        try {
+            EigenDecomposition ed = new EigenDecomposition(rm.copy());
+            return ed.getRealEigenvalues();
+        } catch (MaxCountExceededException e) {
+            return null;
+        }
+
     }
 
-    double[] retrievePLs()
-    {
+    double[] retrievePLs() {
         double[] diff = retrieveMatrix().clone();
-        double[] evs=new double[diff.length];
+        if (diff == null)
+            return null;
+        double[] evs = new double[diff.length];
         for (int i = 0; i < evs.length; i++) {
-            evs[i]=Math.log(Math.abs(diff[i]/baseDiff[i]))/t;
+            evs[i] = Math.log(Math.abs(diff[i] / baseDiff[i])) / time.doubleValue();
         }
         return evs;
     }

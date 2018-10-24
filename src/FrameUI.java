@@ -247,8 +247,12 @@ class FrameUI extends JFrame {
 
             if (model.t % ss == 1) {
                 double[] mat = model.retrievePLs();
+                if(mat==null){
+                    System.out.println("Temporary error.");
+                    continue;
+                }
                 double sum = 0;
-                boolean print = false;
+                boolean print = true;
                 if(print)
                 {
                     for (int i = 0; i < mat.length; i++) {
@@ -257,11 +261,9 @@ class FrameUI extends JFrame {
                         sum+=mat[i];
                         System.out.println();
                     }
-                    System.out.println("sum: "+sum);
+                    System.out.println("Sum: "+sum);
                     System.out.println("\n");
                 }
-
-
             }
         }
     }
