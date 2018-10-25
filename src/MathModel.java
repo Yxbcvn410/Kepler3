@@ -17,9 +17,9 @@ public class MathModel {
 
     public MathModel(BigDecimal[][] params, boolean _autoStep) {
         autoStep = _autoStep;
-        t = 1;
+        t = 0;
         accuCheckStep = 100;
-        Accu = 50;
+        Accu = 60;
         h = new BigDecimal(10);
         reqAccu = new BigDecimal("1E-15");
         os = new BigDecimal(1).divide(new BigDecimal(6), 30, RoundingMode.FLOOR);
@@ -73,7 +73,7 @@ public class MathModel {
     public Vector[] Step() {
         Params = performStep(Params, h);
         t++;
-        if (t % accuCheckStep == 0) {
+        if (t % accuCheckStep == 0&&t!=0) {
             diff = new BigDecimal(0);
             for (int i = 0; i < Params.length; i++) {
                 for (int j = 0; j < 4; j++) {
@@ -237,6 +237,4 @@ public class MathModel {
         } while (!store.equals(sqrt));
         return sqrt.setScale(scale, RoundingMode.FLOOR);
     }
-
-
 }

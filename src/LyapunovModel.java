@@ -7,7 +7,7 @@ import org.apache.commons.math3.linear.RealMatrix;
 public class LyapunovModel {
     MathModel[] models;
     MathModel cModel;
-    public long t = 1;
+    public long t = 0;
     public BigDecimal time = BigDecimal.ZERO;
     double[] baseDiff;
 
@@ -39,7 +39,7 @@ public class LyapunovModel {
         }
         t++;
         time=time.add(cModel.getStep());
-        if (t % cModel.accuCheckStep == 0) {
+        if (t % cModel.accuCheckStep == 0&&t!=0) {
             int accuSt = cModel.getAccuStatus();
             for (int i = 0; i < models.length; i++) {
                 if (models[i].getAccuStatus() < accuSt)
@@ -49,13 +49,13 @@ public class LyapunovModel {
                 case 1:
                     cModel.setH(cModel.getStep().multiply(new BigDecimal(2)));
                     for (int i = 0; i < models.length; i++) {
-                        models[i].setH(cModel.getStep().multiply(new BigDecimal(2)));
+                        models[i].setH(models[i].getStep().multiply(new BigDecimal(2)));
                     }
                     break;
                 case -1:
                     cModel.setH(cModel.getStep().multiply(new BigDecimal("0.5")));
                     for (int i = 0; i < models.length; i++) {
-                        models[i].setH(cModel.getStep().multiply(new BigDecimal("0.5")));
+                        models[i].setH(models[i].getStep().multiply(new BigDecimal("0.5")));
                     }
                     break;
             }
@@ -78,13 +78,12 @@ public class LyapunovModel {
         } catch (MaxCountExceededException e) {
             return null;
         }
-
     }
 
     double[] retrievePLs() {
-        double[] diff = retrieveMatrix().clone();
-        if (diff == null)
+        if(retrieveMatrix()==null)
             return null;
+        double[] diff = retrieveMatrix().clone();
         double[] evs = new double[diff.length];
         for (int i = 0; i < evs.length; i++) {
             evs[i] = Math.log(Math.abs(diff[i] / baseDiff[i])) / time.doubleValue();

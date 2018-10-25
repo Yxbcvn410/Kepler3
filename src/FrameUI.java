@@ -13,7 +13,7 @@ import java.util.Scanner;
 class FrameUI extends JFrame {
     private SystemParams Params;
     private JTextArea reqAccu;
-    private JTextArea accu;
+
     private Canvas canvas;
     private int size;
     private boolean isRunning;
@@ -76,14 +76,11 @@ class FrameUI extends JFrame {
         gc.gridx = 1;
 
         JButton remParams = new JButton("Remove planet");
-        remParams.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                Params.removePlanet(com.getSelectedIndex());
-                com.removeItemAt(com.getItemCount() - 1);
-                if (!isRunning)
-                    RefreshPreview();
-            }
+        remParams.addActionListener(arg0 -> {
+            Params.removePlanet(com.getSelectedIndex());
+            com.removeItemAt(com.getItemCount() - 1);
+            if (!isRunning)
+                RefreshPreview();
         });
         this.add(remParams, gc);
         gc.gridy++;
@@ -96,16 +93,6 @@ class FrameUI extends JFrame {
         gc.gridx = 1;
         reqAccu = new JTextArea("1E-15");
         this.add(reqAccu, gc);
-
-        gc.gridy++;
-        gc.gridx = 0;
-        gc.gridwidth = 1;
-        JLabel pc = new JLabel("Number accuracy");
-        this.add(pc, gc);
-
-        gc.gridx = 1;
-        accu = new JTextArea("50");
-        this.add(accu, gc);
 
         gc.gridy++;
         gc.gridx = 0;
@@ -131,16 +118,15 @@ class FrameUI extends JFrame {
             } else {
                 try {
                     BigDecimal ra = new BigDecimal(reqAccu.getText());
-                    int a = Integer.parseInt(accu.getText());
                     isRunning = true;
                     startButton.setText("Stop");
                     canvas.getGraphics().clearRect(0, 0, size, size);
                     Thread th = new Thread() {
                         public void run() {
                             if (perfLyapunov)
-                                onStartedLyapunov(ra, a);
+                                onStartedLyapunov(ra);
                             else
-                                onStarted(ra, a);
+                                onStarted(ra);
                         }
                     };
                     th.start();
@@ -215,14 +201,13 @@ class FrameUI extends JFrame {
         canvas.setBackground(Color.BLACK);
         canvas.setSize(size, size);
         this.add(canvas, gc);
-
         this.pack();
     }
 
-    void onStarted(BigDecimal ra, int a) {
+    void onStarted(BigDecimal ra) {
         MathModel model = new MathModel(Params.getParams(), true);
         model.setRequiredAccu(ra);
-        model.setAccu(a);
+        model.setAccu(60);
         int rStep = 10;
         int i = 0;
         while (isRunning) {
@@ -233,11 +218,10 @@ class FrameUI extends JFrame {
             } else
                 model.Step();
         }
-
     }
 
-    void onStartedLyapunov(BigDecimal ra, int a) {
-        LyapunovModel model = new LyapunovModel(Params, ra, a);
+    void onStartedLyapunov(BigDecimal ra) {
+        LyapunovModel model = new LyapunovModel(Params, ra, 60);
         int ss = 10;
         while (isRunning) {
             Vector[][] vecs = model.performStep();
@@ -245,18 +229,18 @@ class FrameUI extends JFrame {
                 DrawPoints(vecs[i]);
             }
 
-            if (model.t % ss == 1) {
-                double[] mat = model.retrievePLs();
-                if(mat==null){
+            if (model.t % ss == 0) {
+                if(model.retrievePLs()==null){
                     System.out.println("Temporary error.");
                     continue;
                 }
+                double[] mat = model.retrievePLs();
+
                 double sum = 0;
                 boolean print = true;
                 if(print)
                 {
                     for (int i = 0; i < mat.length; i++) {
-                        //for (int j = 0; j < mat.length; j++)
                         System.out.print(mat[i] + " ");
                         sum+=mat[i];
                         System.out.println();
@@ -270,18 +254,15 @@ class FrameUI extends JFrame {
 
     void DrawPoints(Vector[] points) {
 
-        Thread th = new Thread(){
+        Thread th = new Thread(() -> {
+            Graphics g = canvas.getGraphics();
+            for (int i = 0; i < points.length; i++) {
+                float colorID = i / (float) (points.length);
+                g.setColor(Color.getHSBColor(colorID, 1, 1));
+                g.fillOval(size / 2 + points[i].x - 2, size / 2 - points[i].y - 2, 2, 2);
 
-            public void run() {
-                Graphics g = canvas.getGraphics();
-                for (int i = 0; i < points.length; i++) {
-                    float colorID = i / (float) (points.length);
-                    g.setColor(Color.getHSBColor(colorID, 1, 1));
-                    g.fillOval(size / 2 + points[i].x - 2, size / 2 - points[i].y - 2, 2, 2);
-
-                }
             }
-        };
+        });
         th.start();
     }
 
@@ -314,7 +295,7 @@ class FrameUI extends JFrame {
     private JTextArea vely = new JTextArea("");
     private JTextArea mass = new JTextArea("");
 
-    BigDecimal[] getLaunchParams(BigDecimal[] inParams, int ind) {
+    private BigDecimal[] getLaunchParams(BigDecimal[] inParams, int ind) {
         JLabel lposx = new JLabel("Position X (x1000 km)");
         JLabel lposy = new JLabel("Position Y (x1000 km)");
         JLabel lvelx = new JLabel("Velocity X (km/s)");
@@ -328,16 +309,13 @@ class FrameUI extends JFrame {
         mass = new JTextArea("");
 
         JButton rand = new JButton("Randomize values");
-        rand.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                BigDecimal[] loc = SystemParams.generatePlanet();
-                posx.setText(loc[0].toString());
-                posy.setText(loc[1].toString());
-                velx.setText(loc[2].multiply(new BigDecimal(1000)).toString());
-                vely.setText(loc[3].multiply(new BigDecimal(1000)).toString());
-                mass.setText(loc[4].toString());
-            }
+        rand.addActionListener(e -> {
+            BigDecimal[] loc = SystemParams.generatePlanet();
+            posx.setText(loc[0].toString());
+            posy.setText(loc[1].toString());
+            velx.setText(loc[2].multiply(new BigDecimal(1000)).toString());
+            vely.setText(loc[3].multiply(new BigDecimal(1000)).toString());
+            mass.setText(loc[4].toString());
         });
 
         if (inParams != null) {
@@ -354,7 +332,7 @@ class FrameUI extends JFrame {
         BigDecimal[] lParams = new BigDecimal[5];
         do {
             int result = JOptionPane.showConfirmDialog(null, inputs, "Launch parameters of #" + ind,
-                    JOptionPane.PLAIN_MESSAGE);
+                    JOptionPane.DEFAULT_OPTION);
             if (result == JOptionPane.OK_OPTION) {
                 try {
                     lParams[0] = new BigDecimal(posx.getText());
