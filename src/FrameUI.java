@@ -1,11 +1,14 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.filechooser.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.*;
 import java.util.Scanner;
@@ -15,15 +18,19 @@ class FrameUI extends JFrame {
     private JTextArea reqAccu;
 
     private Canvas canvas;
+    BufferedImage img;
+    Graphics graphics;
+    File imgFile;
+    PrintWriter logWrt;
     private int size;
     private boolean isRunning;
     private JButton startButton;
     private JComboBox com;
-    private final boolean perfLyapunov;
+    private boolean perfLyapunov;
 
     FrameUI(int n, boolean rand, boolean lyapunov) {
         perfLyapunov = lyapunov;
-        this.setTitle("Kepler v6.0");
+        this.setTitle("Kepler v7.0");
         isRunning = false;
         size = 800;
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -89,7 +96,6 @@ class FrameUI extends JFrame {
         gc.gridwidth = 1;
         JLabel ac = new JLabel("Required step accuracy");
         this.add(ac, gc);
-
         gc.gridx = 1;
         reqAccu = new JTextArea("1E-15");
         this.add(reqAccu, gc);
@@ -113,6 +119,7 @@ class FrameUI extends JFrame {
 
             if (isRunning) {
                 isRunning = false;
+                graphics.clearRect(0, 0, size, size);
                 canvas.getGraphics().clearRect(0, 0, size, size);
                 startButton.setText("Start");
             } else {
@@ -158,7 +165,6 @@ class FrameUI extends JFrame {
             public void actionPerformed(ActionEvent arg0) {
                 if (Params.CheckNull())
                     return;
-
                 Params.balance();
                 JOptionPane.showMessageDialog(null, "Successful", "Balance", JOptionPane.INFORMATION_MESSAGE);
                 RefreshPreview();
@@ -181,16 +187,56 @@ class FrameUI extends JFrame {
         gc.gridx = 1;
         JButton SaveButton = new JButton("Save params");
         SaveButton.addActionListener(new ActionListener() {
-
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 if (Params.CheckNull())
                     return;
-
                 Save();
             }
         });
         this.add(SaveButton, gc);
+
+        gc.gridy++;
+
+        gc.gridx = 0;
+        gc.gridwidth = 1;
+        JButton savePic = new JButton("Select picture path...");
+        savePic.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fc = new JFileChooser();
+                fc.setFileFilter(new FileNameExtensionFilter("Picture", ".png"));
+                if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+                    try {
+                        imgFile = fc.getSelectedFile();
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(null, "Error saving file", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        });
+        this.add(savePic, gc);
+
+        gc.gridx = 1;
+        JButton saveLog = new JButton("Select log path...");
+        saveLog.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fc = new JFileChooser();
+                fc.setFileFilter(new FileNameExtensionFilter("Log file", ".log"));
+                if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+                    try {
+                        File log = fc.getSelectedFile();
+                        if(!log.toString().endsWith(".log"))
+                            log=new File(log.toString()+".log");
+                        logWrt=new PrintWriter(log);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(null, "Error saving file", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        });
+        this.add(saveLog, gc);
 
         gc.gridy++;
         gc.gridx = 0;
@@ -200,11 +246,15 @@ class FrameUI extends JFrame {
         canvas = new Canvas();
         canvas.setBackground(Color.BLACK);
         canvas.setSize(size, size);
+        img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+        graphics = img.createGraphics();
+        ((Graphics2D) graphics).setBackground(Color.BLACK);
         this.add(canvas, gc);
         this.pack();
     }
 
     void onStarted(BigDecimal ra) {
+        graphics.clearRect(0, 0, size, size);
         MathModel model = new MathModel(Params.getParams(), true);
         model.setRequiredAccu(ra);
         model.setAccu(60);
@@ -214,13 +264,32 @@ class FrameUI extends JFrame {
             i++;
             if (i > rStep) {
                 DrawPoints(model.Step());
+                canvas.getGraphics().drawImage(img, 0, 0, null);
+                refreshImgFile();
                 i -= rStep;
             } else
-                model.Step();
+                DrawPoints(model.Step());
         }
     }
 
+    void refreshImgFile(){
+        Thread th = new Thread(){
+            @Override
+            public void run() {
+                super.run();
+                try {
+                    if (imgFile != null)
+                        ImageIO.write(img, "png", imgFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        th.start();
+    }
+
     void onStartedLyapunov(BigDecimal ra) {
+        graphics.clearRect(0, 0, size, size);
         LyapunovModel model = new LyapunovModel(Params, ra, 60);
         int ss = 10;
         while (isRunning) {
@@ -228,9 +297,10 @@ class FrameUI extends JFrame {
             for (int i = 0; i < vecs.length; i++) {
                 DrawPoints(vecs[i]);
             }
-
             if (model.t % ss == 0) {
-                if(model.retrievePLs()==null){
+                canvas.getGraphics().drawImage(img, 0, 0, null);
+                refreshImgFile();
+                if (model.retrievePLs() == null) {
                     System.out.println("Temporary error.");
                     continue;
                 }
@@ -238,55 +308,48 @@ class FrameUI extends JFrame {
 
                 double sum = 0;
                 boolean print = true;
-                if(print)
-                {
+                if (logWrt!=null) {
                     for (int i = 0; i < mat.length; i++) {
-                        System.out.print(mat[i] + " ");
-                        sum+=mat[i];
-                        System.out.println();
+                        logWrt.print(mat[i] + " ");
+                        sum += mat[i];
+                        logWrt.println();
                     }
-                    System.out.println("Sum: "+sum);
-                    System.out.println("\n");
+                    logWrt.println("Sum: " + sum);
+                    logWrt.println("\n");
                 }
             }
         }
     }
 
     void DrawPoints(Vector[] points) {
-
-        Thread th = new Thread(() -> {
-            Graphics g = canvas.getGraphics();
-            for (int i = 0; i < points.length; i++) {
-                float colorID = i / (float) (points.length);
-                g.setColor(Color.getHSBColor(colorID, 1, 1));
-                g.fillOval(size / 2 + points[i].x - 2, size / 2 - points[i].y - 2, 2, 2);
-
-            }
-        });
-        th.start();
+        for (int i = 0; i < points.length; i++) {
+            float colorID = i / (float) (points.length);
+            graphics.setColor(Color.getHSBColor(colorID, 1, 1));
+            graphics.fillOval(size / 2 + points[i].x - 2, size / 2 - points[i].y - 2, 2, 2);
+        }
     }
 
     void RefreshPreview() {
-        Graphics g = canvas.getGraphics();
-        g.clearRect(0, 0, size, size);
+        graphics.clearRect(0, 0, size, size);
         for (int i = 0; i < Params.n; i++) {
             try {
                 isRunning = false;
                 float colorID = i / (float) (Params.n);
-                g.setColor(Color.getHSBColor(colorID, 1, 1));
+                graphics.setColor(Color.getHSBColor(colorID, 1, 1));
                 Vector Position = Params.getPosition(i);
                 Vector Speed = Params.getVelocity(i);
 
-                g.fillOval(size / 2 + Position.x - 2, size / 2 - Position.y - 2, 5, 5);
-                g.drawLine(size / 2 + Position.x, size / 2 - Position.y,
+                graphics.fillOval(size / 2 + Position.x - 2, size / 2 - Position.y - 2, 5, 5);
+                graphics.drawLine(size / 2 + Position.x, size / 2 - Position.y,
                         size / 2 + Position.x + (int) (Speed.X.doubleValue() * 100000),
                         size / 2 - Position.y - (int) (Speed.Y.doubleValue() * 100000));
             } catch (NullPointerException e) {
                 JOptionPane.showMessageDialog(null, "Error: no info about planet #" + (i + 1), "Error",
                         JOptionPane.ERROR_MESSAGE);
-                g.clearRect(0, 0, size, size);
+                graphics.clearRect(0, 0, size, size);
             }
         }
+        canvas.getGraphics().drawImage(img, 0, 0, null);
     }
 
     private JTextArea posx = new JTextArea("");

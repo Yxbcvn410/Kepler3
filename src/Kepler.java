@@ -34,5 +34,6 @@ public class Kepler {
 		FrameUI fui = new FrameUI(n, init, lyap);
 		fui.setVisible(true);
 		fui.RefreshPreview();
+		while (true){}
 	}
 }
