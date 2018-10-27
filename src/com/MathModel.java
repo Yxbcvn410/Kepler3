@@ -1,3 +1,5 @@
+package com;
+
 import java.math.*;
 
 public class MathModel {
@@ -10,6 +12,11 @@ public class MathModel {
     public long t;
     public boolean autoStep;
     private BigDecimal reqAccu;
+    private BigDecimal time;
+
+    public BigDecimal getTime() {
+        return time;
+    }
 
     // Velocity in m/s
     // Acceleration in km*1000/s^2
@@ -18,6 +25,7 @@ public class MathModel {
     public MathModel(BigDecimal[][] params, boolean _autoStep) {
         autoStep = _autoStep;
         t = 0;
+        time=new BigDecimal(0);
         accuCheckStep = 100;
         Accu = 60;
         h = new BigDecimal(10);
@@ -70,9 +78,23 @@ public class MathModel {
 
     BigDecimal diff = new BigDecimal(0);
 
+    public Vector[] getPoints(){
+        Vector[] outs = new Vector[Params.length];
+        for (int i = 0; i < outs.length; i++) {
+            outs[i] = new Vector(Params[i][0], Params[i][1]);
+        }
+
+        for (int i = 0; i < Params.length; i++)
+            for (int j = 0; j < 4; j++)
+                Params[i][j] = Params[i][j].setScale(Accu, RoundingMode.FLOOR);
+
+        return outs;
+    }
+
     public Vector[] Step() {
         Params = performStep(Params, h);
         t++;
+        time=time.add(h);
         if (t % accuCheckStep == 0&&t!=0) {
             diff = new BigDecimal(0);
             for (int i = 0; i < Params.length; i++) {
@@ -94,17 +116,8 @@ public class MathModel {
             h = h.stripTrailingZeros();
             refcomParams = performStep(Params, h.multiply(new BigDecimal(accuCheckStep)));
         }
+return this.getPoints();
 
-        Vector[] outs = new Vector[Params.length];
-        for (int i = 0; i < outs.length; i++) {
-            outs[i] = new Vector(Params[i][0], Params[i][1]);
-        }
-
-        for (int i = 0; i < Params.length; i++)
-            for (int j = 0; j < 4; j++)
-                Params[i][j] = Params[i][j].setScale(Accu, RoundingMode.FLOOR);
-
-        return outs;
     }
 
     public BigDecimal[][] performStep(BigDecimal[][] in_Params, BigDecimal step) {

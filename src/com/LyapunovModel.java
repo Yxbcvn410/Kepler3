@@ -1,4 +1,7 @@
+package com;
+
 import java.math.*;
+
 import org.apache.commons.math3.exception.MaxCountExceededException;
 import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.linear.MatrixUtils;
@@ -8,7 +11,6 @@ public class LyapunovModel {
     MathModel[] models;
     MathModel cModel;
     public long t = 0;
-    public BigDecimal time = BigDecimal.ZERO;
     double[] baseDiff;
 
     public LyapunovModel(SystemParams pars, BigDecimal ra, int accu) {
@@ -20,11 +22,11 @@ public class LyapunovModel {
                     ps[i][j] = ps[i][j].add(new BigDecimal("0.001"));
                 else
                     ps[i][j] = ps[i][j].add(new BigDecimal("0.000001"));
-                models[i * 4 + j] = new MathModel(ps, false);
+                models[i * 4 + j] = new MathModel(ps, true);
                 models[i * 4 + j].setAccu(accu);
                 models[i * 4 + j].setRequiredAccu(ra);
             }
-        cModel = new MathModel(pars.getParams(), false);
+        cModel = new MathModel(pars.getParams(), true);
         cModel.setAccu(accu);
         cModel.setRequiredAccu(ra);
 
@@ -33,34 +35,34 @@ public class LyapunovModel {
 
     Vector[][] performStep() {
         Vector[][] out = new Vector[models.length + 1][models.length / 4];
-        out[0] = cModel.Step();
+        BigDecimal mTime = cModel.getTime();
+        for (int i = 0; i < models.length; i++)
+            if (models[i].getTime().compareTo(mTime) == 1)
+                mTime = models[i].getTime();
+            boolean ch = false;
+        if (cModel.getTime().compareTo(mTime) != 0) {
+            cModel.Step();
+            ch=true;
+        }
+        for (int i = 0; i < models.length; i++)
+            if (models[i].getTime().compareTo(mTime) != 0) {
+                models[i].Step();
+                ch = true;
+            }
+        if(!ch)
+        {
+            cModel.Step();
+            for (MathModel model:models) {
+                model.Step();
+            }
+            
+        }
+        out[0] = cModel.getPoints();
         for (int i = 1; i < out.length; i++) {
-            out[i] = models[i - 1].Step();
+            out[i] = models[i - 1].getPoints();
         }
         t++;
-        time=time.add(cModel.getStep());
-        if (t % cModel.accuCheckStep == 0&&t!=0) {
-            int accuSt = cModel.getAccuStatus();
-            for (int i = 0; i < models.length; i++) {
-                if (models[i].getAccuStatus() < accuSt)
-                    accuSt = models[i].getAccuStatus();
-            }
-            switch (accuSt) {
-                case 1:
-                    cModel.setH(cModel.getStep().multiply(new BigDecimal(2)));
-                    for (int i = 0; i < models.length; i++) {
-                        models[i].setH(models[i].getStep().multiply(new BigDecimal(2)));
-                    }
-                    break;
-                case -1:
-                    cModel.setH(cModel.getStep().multiply(new BigDecimal("0.5")));
-                    for (int i = 0; i < models.length; i++) {
-                        models[i].setH(models[i].getStep().multiply(new BigDecimal("0.5")));
-                    }
-                    break;
-            }
-            System.out.println("Step set to: " + cModel.getStep().toString());
-        }
+
         return out;
     }
 
@@ -81,12 +83,12 @@ public class LyapunovModel {
     }
 
     double[] retrievePLs() {
-        if(retrieveMatrix()==null)
+        if (retrieveMatrix() == null)
             return null;
         double[] diff = retrieveMatrix().clone();
         double[] evs = new double[diff.length];
         for (int i = 0; i < evs.length; i++) {
-            evs[i] = Math.log(Math.abs(diff[i] / baseDiff[i])) / time.doubleValue();
+            evs[i] = Math.log(Math.abs(diff[i] / baseDiff[i])) / cModel.getTime().doubleValue();
         }
         return evs;
     }

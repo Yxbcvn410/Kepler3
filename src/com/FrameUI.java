@@ -1,7 +1,7 @@
+package com;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.event.CaretEvent;
-import javax.swing.event.CaretListener;
 import javax.swing.filechooser.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -30,7 +30,7 @@ class FrameUI extends JFrame {
 
     FrameUI(int n, boolean rand, boolean lyapunov) {
         perfLyapunov = lyapunov;
-        this.setTitle("Kepler v7.0");
+        this.setTitle("Kepler v7.1");
         isRunning = false;
         size = 800;
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

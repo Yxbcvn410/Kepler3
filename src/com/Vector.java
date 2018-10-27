@@ -1,3 +1,5 @@
+package com;
+
 import java.math.BigDecimal;
 
 public class Vector {

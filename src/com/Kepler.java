@@ -1,9 +1,11 @@
+package com;
+
 import javax.swing.*;
-import java.math.*;
 
 public class Kepler {
 
 	public static void main(String[] args) {
+		System.out.println("Activated.");
 		JLabel l = new JLabel("Enter number of planets:");
 		JTextArea pn = new JTextArea("3");
 		JCheckBox cb = new JCheckBox("Init with random values");
