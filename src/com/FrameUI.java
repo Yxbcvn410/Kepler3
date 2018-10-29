@@ -205,10 +205,12 @@ class FrameUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 JFileChooser fc = new JFileChooser();
-                fc.setFileFilter(new FileNameExtensionFilter("Picture", ".png"));
+                fc.setFileFilter(new FileNameExtensionFilter("Picture", "png"));
                 if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
                     try {
                         imgFile = fc.getSelectedFile();
+                        if(!fc.getSelectedFile().toString().endsWith(".png"))
+                            imgFile=new File(fc.getSelectedFile().toString()+".png");
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(null, "Error saving file", "Error", JOptionPane.ERROR_MESSAGE);
                     }
@@ -223,7 +225,7 @@ class FrameUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 JFileChooser fc = new JFileChooser();
-                fc.setFileFilter(new FileNameExtensionFilter("Log file", ".log"));
+                fc.setFileFilter(new FileNameExtensionFilter("Log file", "log"));
                 if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
                     try {
                         File log = fc.getSelectedFile();
