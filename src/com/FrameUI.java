@@ -137,7 +137,6 @@ class FrameUI extends JFrame {
                         }
                     };
                     th.start();
-
                 } catch (NumberFormatException ee) {
                     JOptionPane.showMessageDialog(null, "Error: wrong number format", "Error",
                             JOptionPane.OK_OPTION);

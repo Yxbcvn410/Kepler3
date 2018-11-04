@@ -40,12 +40,12 @@ public class LyapunovModel {
             if (models[i].getTime().compareTo(mTime) == 1)
                 mTime = models[i].getTime();
             boolean ch = false;
-        if (cModel.getTime().compareTo(mTime) != 0) {
+        while (cModel.getTime().compareTo(mTime) != 0) {
             cModel.Step();
             ch=true;
         }
         for (int i = 0; i < models.length; i++)
-            if (models[i].getTime().compareTo(mTime) != 0) {
+            while (models[i].getTime().compareTo(mTime) != 0) {
                 models[i].Step();
                 ch = true;
             }
@@ -55,7 +55,6 @@ public class LyapunovModel {
             for (MathModel model:models) {
                 model.Step();
             }
-            
         }
         out[0] = cModel.getPoints();
         for (int i = 1; i < out.length; i++) {
