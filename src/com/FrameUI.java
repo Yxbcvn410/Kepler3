@@ -11,6 +11,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.*;
+import java.net.URL;
 import java.util.Scanner;
 
 class FrameUI extends JFrame {
@@ -30,7 +31,12 @@ class FrameUI extends JFrame {
 
     FrameUI(int n, boolean rand, boolean lyapunov) {
         perfLyapunov = lyapunov;
-        this.setTitle("Kepler v7.1");
+        this.setTitle("Kepler v7.1.1");
+        try {
+            this.setIconImage(ImageIO.read(new File("src/art/logo.png")));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         isRunning = false;
         size = 800;
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -208,8 +214,8 @@ class FrameUI extends JFrame {
                 if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
                     try {
                         imgFile = fc.getSelectedFile();
-                        if(!fc.getSelectedFile().toString().endsWith(".png"))
-                            imgFile=new File(fc.getSelectedFile().toString()+".png");
+                        if (!fc.getSelectedFile().toString().endsWith(".png"))
+                            imgFile = new File(fc.getSelectedFile().toString() + ".png");
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(null, "Error saving file", "Error", JOptionPane.ERROR_MESSAGE);
                     }
@@ -228,9 +234,9 @@ class FrameUI extends JFrame {
                 if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
                     try {
                         File log = fc.getSelectedFile();
-                        if(!log.toString().endsWith(".log"))
-                            log=new File(log.toString()+".log");
-                        logWrt=new PrintWriter(log);
+                        if (!log.toString().endsWith(".log"))
+                            log = new File(log.toString() + ".log");
+                        logWrt = new PrintWriter(log);
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(null, "Error saving file", "Error", JOptionPane.ERROR_MESSAGE);
                     }
@@ -273,8 +279,8 @@ class FrameUI extends JFrame {
         }
     }
 
-    void refreshImgFile(){
-        Thread th = new Thread(){
+    void refreshImgFile() {
+        Thread th = new Thread() {
             @Override
             public void run() {
                 super.run();
@@ -300,7 +306,8 @@ class FrameUI extends JFrame {
             }
             if (model.t % ss == 0) {
                 canvas.getGraphics().drawImage(img, 0, 0, null);
-                refreshImgFile();
+                if (model.t % (ss * 1000) == 0)
+                    refreshImgFile();
                 if (model.retrievePLs() == null) {
                     System.out.println("Temporary error.");
                     continue;
@@ -309,7 +316,7 @@ class FrameUI extends JFrame {
 
                 double sum = 0;
                 boolean print = true;
-                if (logWrt!=null) {
+                if (logWrt != null) {
                     for (int i = 0; i < mat.length; i++) {
                         logWrt.print(mat[i] + " ");
                         sum += mat[i];
