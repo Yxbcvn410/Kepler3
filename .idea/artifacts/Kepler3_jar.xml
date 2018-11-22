@@ -9,6 +9,7 @@
       <element id="extracted-dir" path="/opt/commons-math3-3.6.1/commons-math3-3.6.1-javadoc.jar" path-in-jar="/" />
       <element id="extracted-dir" path="/opt/commons-math3-3.6.1/commons-math3-3.6.1-sources.jar" path-in-jar="/" />
       <element id="extracted-dir" path="/opt/commons-math3-3.6.1/commons-math3-3.6.1-test-sources.jar" path-in-jar="/" />
+      <element id="dir-copy" path="$PROJECT_DIR$/res" />
     </root>
   </artifact>
 </component>

@@ -18,6 +18,8 @@ public class MathModel {
         return time;
     }
 
+
+
     // Velocity in m/s
     // Acceleration in km*1000/s^2
     // Distance in km*1000
@@ -46,11 +48,6 @@ public class MathModel {
 
     public BigDecimal getStep() {
         return h;
-    }
-
-    public void setH(BigDecimal h) {
-        this.h = h;
-        refcomParams = performStep(Params, h.multiply(new BigDecimal(accuCheckStep)));
     }
 
     public void setAccu(int accu) {

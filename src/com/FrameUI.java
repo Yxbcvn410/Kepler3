@@ -17,12 +17,11 @@ import java.util.Scanner;
 class FrameUI extends JFrame {
     private SystemParams Params;
     private JTextArea reqAccu;
-
     private Canvas canvas;
-    BufferedImage img;
-    Graphics graphics;
-    File imgFile;
-    PrintWriter logWrt;
+    private BufferedImage img;
+    private Graphics graphics;
+    private File imgFile;
+    private PrintWriter logWrt;
     private int size;
     private boolean isRunning;
     private JButton startButton;
@@ -31,9 +30,9 @@ class FrameUI extends JFrame {
 
     FrameUI(int n, boolean rand, boolean lyapunov) {
         perfLyapunov = lyapunov;
-        this.setTitle("Kepler v7.1.1");
+        this.setTitle("Kepler v7.1.2");
         try {
-            this.setIconImage(ImageIO.read(new File("src/art/logo.png")));
+            this.setIconImage(ImageIO.read(new File("res/logo.png")));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -211,11 +210,14 @@ class FrameUI extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 JFileChooser fc = new JFileChooser();
                 fc.setFileFilter(new FileNameExtensionFilter("Picture", "png"));
+                if (imgFile != null)
+                    fc.setCurrentDirectory(imgFile.getParentFile());
                 if (fc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
                     try {
                         imgFile = fc.getSelectedFile();
                         if (!fc.getSelectedFile().toString().endsWith(".png"))
                             imgFile = new File(fc.getSelectedFile().toString() + ".png");
+                        refreshImgFile();
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(null, "Error saving file", "Error", JOptionPane.ERROR_MESSAGE);
                     }
@@ -266,17 +268,13 @@ class FrameUI extends JFrame {
         model.setRequiredAccu(ra);
         model.setAccu(60);
         int rStep = 10;
-        int i = 0;
-        while (isRunning) {
-            i++;
-            if (i > rStep) {
-                DrawPoints(model.Step());
-                canvas.getGraphics().drawImage(img, 0, 0, null);
+        while (isRunning) if (model.t % rStep == 0) {
+            DrawPoints(model.Step());
+            canvas.getGraphics().drawImage(img, 0, 0, null);
+            if (model.t % (rStep * 100) == 0)
                 refreshImgFile();
-                i -= rStep;
-            } else
-                DrawPoints(model.Step());
-        }
+        } else
+            DrawPoints(model.Step());
     }
 
     void refreshImgFile() {
@@ -295,6 +293,20 @@ class FrameUI extends JFrame {
         th.start();
     }
 
+    void printStepSummary(LyapunovModel lmod)
+    {
+       PrintWriter pw = new PrintWriter(System.out);
+       pw.println("Model accu summary:");
+       pw.println(lmod.cModel.getStep());
+       pw.println(lmod.cModel.getTime());
+       for(MathModel mm : lmod.models){
+           pw.println(mm.getStep());
+           pw.println(mm.getTime());
+       }
+       pw.println();
+       pw.flush();
+    }
+
     void onStartedLyapunov(BigDecimal ra) {
         graphics.clearRect(0, 0, size, size);
         LyapunovModel model = new LyapunovModel(Params, ra, 60);
@@ -306,8 +318,10 @@ class FrameUI extends JFrame {
             }
             if (model.t % ss == 0) {
                 canvas.getGraphics().drawImage(img, 0, 0, null);
-                if (model.t % (ss * 1000) == 0)
+                if (model.t % (ss * 100) == 0){
                     refreshImgFile();
+                    printStepSummary(model);
+                }
                 if (model.retrievePLs() == null) {
                     System.out.println("Temporary error.");
                     continue;
