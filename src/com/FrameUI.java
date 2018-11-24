@@ -30,7 +30,7 @@ class FrameUI extends JFrame {
 
     FrameUI(int n, boolean rand, boolean lyapunov) {
         perfLyapunov = lyapunov;
-        this.setTitle("Kepler v7.1.2");
+        this.setTitle("Kepler v7.1.3");
         try {
             this.setIconImage(ImageIO.read(new File("res/logo.png")));
         } catch (IOException e) {
@@ -268,13 +268,14 @@ class FrameUI extends JFrame {
         model.setRequiredAccu(ra);
         model.setAccu(60);
         int rStep = 10;
-        while (isRunning) if (model.t % rStep == 0) {
+        while (isRunning) {
             DrawPoints(model.Step());
-            canvas.getGraphics().drawImage(img, 0, 0, null);
-            if (model.t % (rStep * 100) == 0)
-                refreshImgFile();
-        } else
-            DrawPoints(model.Step());
+            if (model.t % rStep == 0) {
+                canvas.getGraphics().drawImage(img, 0, 0, null);
+                if (model.t % (rStep * 100) == 0)
+                    refreshImgFile();
+            }
+        }
     }
 
     void refreshImgFile() {
@@ -318,7 +319,7 @@ class FrameUI extends JFrame {
             }
             if (model.t % ss == 0) {
                 canvas.getGraphics().drawImage(img, 0, 0, null);
-                if (model.t % (ss * 100) == 0){
+                if (model.t % (ss * 20) == 0){
                     refreshImgFile();
                     printStepSummary(model);
                 }
